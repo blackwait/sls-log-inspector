@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SLS Log Inspector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      window.tailwind = {
+        config: {
+          theme: {
+            extend: {
+              colors: {
+                ink: "var(--ink)",
+                muted: "var(--muted)",
+                panel: "var(--panel)",
+                soft: "var(--panel-soft)",
+                line: "var(--line)",
+                brand: "var(--blue)",
+              },
+              fontFamily: {
+                sans: ["Inter", "Segoe UI", "Microsoft YaHei UI", "system-ui", "sans-serif"],
+                mono: ["JetBrains Mono", "Cascadia Mono", "Consolas", "SFMono-Regular", "monospace"],
+              },
+              boxShadow: {
+                panel: "var(--shadow)",
+                lift: "var(--shadow-lift)",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260612sb1" />
+  </head>
+  <body class="bg-[var(--bg)] text-ink antialiased">
+    <div id="appShell" class="app-shell bg-[var(--bg)]">
+      <aside id="sidebar" class="sidebar border-r border-line/80 bg-[var(--sidebar-bg)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.45)]">
+        <div class="brand rounded-md border border-line/70 bg-panel/80 p-2 shadow-sm">
+          <div class="brand-mark shadow-md shadow-orange-500/20">S</div>
+          <div class="brand-copy">
+            <h1 class="tracking-tight">SLS Log Inspector</h1>
+            <p>研发排查工作台</p>
+          </div>
+          <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="折叠侧边栏" aria-expanded="true" title="折叠侧边栏">‹</button>
+        </div>
+
+        <label class="drop-zone group relative overflow-hidden rounded-md border border-dashed border-line bg-panel/80 shadow-sm transition hover:border-brand hover:bg-soft" id="dropZone">
+          <input id="fileInput" type="file" accept=".json,application/json" />
+          <span class="drop-icon transition group-hover:scale-105">+</span>
+          <strong>拖入 JSON 文件</strong>
+          <small>或点击选择，自动替换当前日志</small>
+        </label>
+
+        <div class="sidebar-section field-browser rounded-md border border-line/70 bg-panel/60 p-2 shadow-sm">
+          <div class="section-title">索引字段</div>
+          <div id="fieldFilters" class="filter-stack"></div>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section id="queryRankPanel" class="query-rank-panel hidden rounded-md border border-emerald-200/80 bg-emerald-50/80 shadow-panel">
+          <div class="query-rank-title">
+            <strong>今日查询排行榜</strong>
+            <span id="queryRankSummary"></span>
+          </div>
+          <ol id="queryRankList"></ol>
+        </section>
+
+        <section class="timeline-panel rounded-md border border-line/80 bg-panel shadow-panel">
+          <div class="panel-head bg-panel/90">
+            <div>
+              <strong>日志条数</strong>
+              <b id="metricTotal">0</b>
+              <span id="timeRange">等待导入</span>
+            </div>
+            <div class="metric-strip">
+              <span>异常/警告 <b id="metricRisk">0</b></span>
+              <span>平均耗时 <b id="metricAvg">-</b></span>
+              <span>Trace <b id="metricTrace">0</b></span>
+              <a id="onlineUsersLink" class="online-users-link" href="./online.html" title="查看在线用户列表">在线 <b id="onlineUsersCount">-</b> 人</a>
+              <select id="themeSelector" class="theme-selector" aria-label="主题切换">
+                <option value="light">☀️ 浅色</option>
+                <option value="dark">◐ 石墨</option>
+                <option value="ocean">◆ 靛蓝</option>
+                <option value="forest">◇ 松岩</option>
+              </select>
+            </div>
+          </div>
+          <div class="timeline-body">
+            <div id="timelineChart" class="timeline-chart"></div>
+          </div>
+        </section>
+
+        <header class="querybar rounded-md border border-line/80 bg-panel shadow-panel">
+          <div class="time-picker-wrap" id="timePickerWrap">
+            <button id="timePickerToggle" class="time-picker-toggle" type="button">
+              <span id="timePickerLabel">全部时间</span>
+              <span class="tp-arrow">▾</span>
+            </button>
+            <div id="timePickerDropdown" class="time-picker-dropdown hidden">
+              <div class="tp-section">
+                <div class="tp-section-title">快捷选择</div>
+                <div class="tp-presets">
+                  <button type="button" data-preset="1m">1分钟</button>
+                  <button type="button" data-preset="5m">5分钟</button>
+                  <button type="button" data-preset="15m">15分钟</button>
+                  <button type="button" data-preset="1h">1小时</button>
+                  <button type="button" data-preset="4h">4小时</button>
+                  <button type="button" data-preset="1d">1天</button>
+                  <button type="button" data-preset="all">全部</button>
+                </div>
+              </div>
+              <div class="tp-section">
+                <div class="tp-section-title">自定义时间段</div>
+                <div class="tp-custom">
+                  <input id="tpStart" type="text" placeholder="开始 yyyy-MM-dd HH:mm:ss" />
+                  <span>~</span>
+                  <input id="tpEnd" type="text" placeholder="结束 yyyy-MM-dd HH:mm:ss" />
+                </div>
+                <button id="tpApply" class="tp-apply" type="button">确认</button>
+              </div>
+            </div>
+          </div>
+          <button id="clearBucketButton" class="clear-time-btn" type="button">✕</button>
+          <div class="search-wrap">
+            <span class="search-icon"></span>
+            <input id="searchInput" type="search" placeholder="关键词 / not content.path: &quot;xxx&quot; 排除语法，回车或点查询生效" />
+            <button id="searchButton" class="search-btn" type="button">查询</button>
+          </div>
+          <select id="levelFilter" aria-label="日志级别">
+            <option value="all">全部级别</option>
+          </select>
+          <select id="methodFilter" aria-label="调用方式">
+            <option value="all">全部方式</option>
+          </select>
+          <button id="resetButton" type="button">重置</button>
+        </header>
+
+        <section class="online-query-panel rounded-md border border-line/80 bg-panel shadow-panel" id="onlineQueryPanel">
+          <div class="online-head">
+            <div class="online-head-left">
+              <button id="onlinePanelToggle" class="online-panel-toggle" type="button">▾</button>
+              <strong>在线查询</strong>
+              <span id="onlineStatus">正在检测本地代理...</span>
+              <span id="queryRankHint" class="query-rank-hint hidden"></span>
+            </div>
+            <div class="online-actions">
+              <div class="online-mode-tabs" role="tablist" aria-label="在线查询模式">
+                <button id="quickModeButton" class="active" type="button">快速查询</button>
+                <button id="sqlModeButton" type="button">SQL 查询</button>
+              </div>
+              <button id="onlineRebuildSqlButton" type="button">重建语句</button>
+              <button id="onlineCopySqlButton" type="button">复制语句</button>
+              <button id="onlineRunButton" class="primary-btn" type="button">查询</button>
+            </div>
+          </div>
+
+          <div class="online-grid">
+            <label class="online-field">
+              <span>预设</span>
+              <select id="onlinePresetSelect"></select>
+            </label>
+            <label class="online-field">
+              <span>日志流</span>
+              <div class="stream-picker" id="streamPicker">
+                <button type="button" class="stream-toggle" id="streamPickerToggle">
+                  <span id="streamPickerLabel">java_test_console</span>
+                  <span class="tp-arrow">▾</span>
+                </button>
+                <div class="stream-dropdown hidden" id="streamPickerDropdown"></div>
+              </div>
+              <input id="onlineStreamInput" type="hidden" value="java_test_console" />
+            </label>
+            <label class="online-field">
+              <span>时间</span>
+              <select id="onlineTimePresetSelect">
+                <option value="5m">最近 5 分钟</option>
+                <option value="15m">最近 15 分钟</option>
+                <option value="30m">最近 30 分钟</option>
+                <option value="1h">最近 1 小时</option>
+                <option value="2h">最近 2 小时</option>
+                <option value="1d">最近 1 天</option>
+                <option value="2d">最近 2 天</option>
+                <option value="custom">自定义</option>
+              </select>
+            </label>
+            <label class="online-field online-custom-time hidden">
+              <span>开始</span>
+              <input id="onlineStartInput" type="datetime-local" />
+            </label>
+            <label class="online-field online-custom-time hidden">
+              <span>结束</span>
+              <input id="onlineEndInput" type="datetime-local" />
+            </label>
+            <label class="online-field narrow">
+              <span>条数</span>
+              <input id="onlineLimitInput" type="number" min="1" max="5000" value="100" />
+            </label>
+            <label class="online-field keyword">
+              <span>关键词</span>
+              <input id="onlineKeywordInput" type="text" placeholder="异常、trace、接口名" />
+            </label>
+          </div>
+
+          <div id="onlineDynamicFilters" class="online-filter-grid"></div>
+
+          <div id="quickQueryPane" class="quick-query-pane">
+            <div class="quick-filter-grid">
+              <label class="online-field">
+                <span>path =</span>
+                <input id="quickPathInput" type="text" placeholder="/resume/get 或 RPC 方法名" />
+              </label>
+              <label class="online-field">
+                <span>container_name =</span>
+                <input id="quickContainerInput" type="text" list="containerNameSuggestions" autocomplete="off" placeholder="输入项目名，如 job-service、resume-attach" />
+                <datalist id="containerNameSuggestions"></datalist>
+              </label>
+              <label class="online-field">
+                <span>参数 contains</span>
+                <input id="quickParamInput" type="text" placeholder="userId、jobId、手机号后四位" />
+              </label>
+              <fieldset class="str-match-group">
+                <legend>str_match(字段, 内容)</legend>
+                <div class="str-match-inputs">
+                  <input id="quickFieldInput" type="text" placeholder="message" />
+                  <input id="quickMatchInput" type="text" placeholder="docToPdf、NullPointerException" />
+                </div>
+              </fieldset>
+            </div>
+            <label class="online-field quick-expression-field">
+              <span>OpenObserve 表达式</span>
+              <textarea id="quickExpressionInput" rows="1" placeholder="例如：str_match(message, 'timeout') AND path='/api/demo'"></textarea>
+              <div id="syntaxSuggest" class="syntax-suggest hidden"></div>
+            </label>
+            <div class="quick-snippets-section">
+              <span class="quick-snippets-label">快速条件</span>
+              <div class="quick-snippets" aria-label="常用语法">
+                <button type="button" data-snippet="str_match(message, 's')">str_match(message, 's')</button>
+                <button type="button" data-snippet="str_match(params, 's')">参数 str_match</button>
+                <button type="button" data-snippet="path=''">path=''</button>
+                <button type="button" data-snippet="result_code=0">result_code=0</button>
+                <button type="button" data-snippet="level='error'">level='error'</button>
+              </div>
+              <div class="online-draft-row">
+                <select id="onlineDraftSelect" aria-label="查询草稿"></select>
+                <button id="onlineSaveDraftButton" type="button">保存草稿</button>
+                <button id="onlineDeleteDraftButton" type="button">删除草稿</button>
+                <button id="onlineExportDraftsButton" type="button">导出草稿</button>
+              </div>
+            </div>
+          </div>
+
+          <textarea id="onlineSqlInput" class="online-sql hidden" rows="4" placeholder="启动本地服务后会自动生成 SQL，也可以手动调整"></textarea>
+          <details class="online-debug">
+            <summary>调试信息 / 最终查询语句 / 错误详情</summary>
+            <div class="generated-sql-preview">
+              <span>最终查询语句</span>
+              <code id="onlineGeneratedSql"></code>
+            </div>
+            <pre id="onlineDebugBox">{}</pre>
+          </details>
+        </section>
+
+        <section class="result-toolbar rounded-md border border-line/80 bg-panel shadow-panel">
+          <div class="toolbar-left">
+            <strong>原始日志</strong>
+            <span id="resultCount">0 条</span>
+            <button id="sortButton" class="sort-control" type="button">时间正序 ↑</button>
+          </div>
+          <div id="pagination" class="pagination"></div>
+          <div class="toolbar-actions">
+            <button id="slimModeButton" type="button">精简</button>
+            <button id="superSlimModeButton" type="button">超精简</button>
+            <button id="toggleAllButton" type="button">折叠全部</button>
+          </div>
+        </section>
+
+        <section class="log-list-panel rounded-md border border-line/80 bg-panel shadow-panel">
+          <div id="queryLoading" class="query-loading hidden">
+            <div class="loading-spinner"></div>
+            <span>正在查询...</span>
+            <button id="cancelQueryButton" class="cancel-query-btn" type="button">取消查询</button>
+          </div>
+          <div id="emptyState" class="empty-state">
+            <span>暂无日志数据</span>
+          </div>
+          <div id="logList" class="log-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js?v=20260612sb1"></script>
+  </body>
+</html>

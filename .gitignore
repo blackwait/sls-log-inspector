@@ -1,0 +1,9 @@
+config.json
+deploy_remote.py
+local-server.*.log
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+.env
+.env.*

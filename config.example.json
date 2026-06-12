@@ -1,0 +1,254 @@
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 8012
+  },
+  "openobserve": {
+    "base_url": "http://openobserve.yupaowang.com",
+    "organization": "default",
+    "config_path": "/config",
+    "endpoint_path": "/api/{organization}/_search_stream",
+    "query_string": {
+      "type": "logs",
+      "search_type": "ui",
+      "use_cache": "true"
+    },
+    "timeout_seconds": 20,
+    "verify_ssl": false,
+    "request_defaults": {
+      "sql_mode": "full",
+      "quick_mode": false
+    },
+    "auth": {
+      "mode": "cookie",
+      "username": "",
+      "password": "",
+      "cookie": "auth_tokens=replace-me"
+    },
+    "auto_login": {
+      "enabled": false,
+      "login_path": "/auth/login",
+      "username": "",
+      "password": "",
+      "username_env": "OPENOBSERVE_USERNAME",
+      "password_env": "OPENOBSERVE_PASSWORD",
+      "refresh_interval_hours": 24,
+      "last_login_at": 0
+    },
+    "headers": {
+      "Accept": "*/*",
+      "Origin": "http://openobserve.yupaowang.com",
+      "Referer": "http://openobserve.yupaowang.com/web/logs"
+    },
+    "config_fallback": {
+      "version": "",
+      "default_functions": [
+        {
+          "name": "match_all",
+          "text": "match_all('v')"
+        },
+        {
+          "name": "fuzzy_match_all",
+          "text": "fuzzy_match_all('v', 1)"
+        },
+        {
+          "name": "str_match",
+          "text": "str_match(field, 'v')"
+        },
+        {
+          "name": "str_match_ignore_case",
+          "text": "str_match_ignore_case(field, 'v')"
+        },
+        {
+          "name": "match_field",
+          "text": "match_field(field, 'v')"
+        },
+        {
+          "name": "match_field_ignore_case",
+          "text": "match_field_ignore_case(field, 'v')"
+        },
+        {
+          "name": "fuzzy_match",
+          "text": "fuzzy_match(field, 'v', 1)"
+        },
+        {
+          "name": "re_match",
+          "text": "re_match(field, 'pattern')"
+        },
+        {
+          "name": "re_not_match",
+          "text": "re_not_match(field, 'pattern')"
+        },
+        {
+          "name": "re_matches",
+          "text": "re_matches(field, 'pattern')"
+        },
+        {
+          "name": "cast_to_timestamp",
+          "text": "cast_to_timestamp('pattern')"
+        }
+      ],
+      "default_fts_keys": [
+        "body",
+        "content",
+        "data",
+        "error",
+        "json",
+        "llm_input",
+        "llm_output",
+        "log",
+        "message",
+        "msg"
+      ],
+      "default_secondary_index_fields": [
+        "operation_name",
+        "service_name",
+        "trace_id"
+      ],
+      "timestamp_column": "_timestamp",
+      "query_default_limit": 1000,
+      "quick_mode_enabled": false,
+      "streaming_enabled": true,
+      "histogram_enabled": true
+    }
+  },
+  "ui": {
+    "title": "SLS Log Inspector"
+  },
+  "streams": [
+    {
+      "value": "java_master_console",
+      "label": "java_master_console"
+    },
+    {
+      "value": "java_prod_console",
+      "label": "java_prod_console"
+    },
+    {
+      "value": "java_prod_error",
+      "label": "java_prod_error"
+    },
+    {
+      "value": "java_test_console",
+      "label": "java_test_console",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "key": "app_error",
+      "label": "应用报错",
+      "description": "按错误级别、容器名、TraceId 等快速定位异常日志",
+      "stream": "java_test_console",
+      "select": [
+        "*"
+      ],
+      "default_minutes": 30,
+      "default_limit": 100,
+      "order_by": "_timestamp DESC",
+      "must_equal": {
+        "level": "error"
+      },
+      "keyword_fields": [
+        "msg",
+        "path",
+        "result",
+        "params",
+        "yptraceid",
+        "container_name"
+      ],
+      "filters": [
+        {
+          "key": "container_name",
+          "label": "容器名",
+          "field": "container_name",
+          "type": "text",
+          "placeholder": "resume-attach"
+        },
+        {
+          "key": "yptraceid",
+          "label": "yptraceid",
+          "field": "yptraceid",
+          "type": "text"
+        },
+        {
+          "key": "request_id",
+          "label": "Request ID",
+          "field": "request_id",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "key": "request_trace",
+      "label": "请求链路",
+      "description": "按 TraceId / RequestId 快速回放一次请求相关日志",
+      "stream": "java_test_console",
+      "select": [
+        "*"
+      ],
+      "default_minutes": 120,
+      "default_limit": 200,
+      "order_by": "_timestamp DESC",
+      "must_equal": {},
+      "keyword_fields": [
+        "msg",
+        "path",
+        "result",
+        "params",
+        "yptraceid",
+        "container_name"
+      ],
+      "filters": [
+        {
+          "key": "yptraceid",
+          "label": "yptraceid",
+          "field": "yptraceid",
+          "type": "text"
+        },
+        {
+          "key": "request_id",
+          "label": "Request ID",
+          "field": "request_id",
+          "type": "text"
+        },
+        {
+          "key": "container_name",
+          "label": "容器名",
+          "field": "container_name",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "key": "keyword_search",
+      "label": "关键词排查",
+      "description": "按容器名和关键词快速检索日志",
+      "stream": "java_test_console",
+      "select": [
+        "*"
+      ],
+      "default_minutes": 60,
+      "default_limit": 100,
+      "order_by": "_timestamp DESC",
+      "must_equal": {},
+      "keyword_fields": [
+        "msg",
+        "path",
+        "result",
+        "params",
+        "yptraceid",
+        "container_name"
+      ],
+      "filters": [
+        {
+          "key": "container_name",
+          "label": "容器名",
+          "field": "container_name",
+          "type": "text",
+          "placeholder": "resume-attach"
+        }
+      ]
+    }
+  ]
+}
