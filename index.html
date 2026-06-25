@@ -4,12 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SLS Log Inspector</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
+    <!-- fonts loaded locally -->
+    <link rel="stylesheet" href="./assets/fonts/local-fonts.css" />
     <script>
       window.tailwind = {
         config: {
@@ -36,8 +32,8 @@
         },
       };
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="./styles.css?v=20260612sb1" />
+    <script src="./assets/tailwind.js"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260625share" />
   </head>
   <body class="bg-[var(--bg)] text-ink antialiased">
     <div id="appShell" class="app-shell bg-[var(--bg)]">
@@ -158,6 +154,7 @@
               </div>
               <button id="onlineRebuildSqlButton" type="button">重建语句</button>
               <button id="onlineCopySqlButton" type="button">复制语句</button>
+              <button id="shareQueryButton" type="button" class="share-btn" title="复制分享链接">分享</button>
               <button id="onlineRunButton" class="primary-btn" type="button">查询</button>
             </div>
           </div>
@@ -296,6 +293,6 @@
       </main>
     </div>
 
-    <script src="./app.js?v=20260612sb1"></script>
+    <script src="./app.js?v=20260625share"></script>
   </body>
 </html>

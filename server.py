@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
+import gzip
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -188,9 +189,37 @@ def file_response(handler: BaseHTTPRequestHandler, path: Path) -> None:
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     if path.suffix in {".html", ".css", ".js"}:
         content_type += "; charset=utf-8"
+
+    # Gzip compression for text-based content
+    accept_encoding = handler.headers.get("Accept-Encoding", "")
+    is_text = content_type.startswith("text/") or content_type.startswith("application/json") or content_type.startswith("application/javascript")
+
+    if is_text and "gzip" in accept_encoding and len(body) > 256:
+        compressed = gzip.compress(body, compresslevel=6)
+        if len(compressed) < len(body):
+            handler.send_response(HTTPStatus.OK)
+            handler.send_header("Content-Type", content_type)
+            handler.send_header("Content-Encoding", "gzip")
+            handler.send_header("Content-Length", str(len(compressed)))
+            # Cache-Control for static assets
+            cacheable = path.suffix in {".js", ".css", ".ttf", ".woff", ".woff2", ".png", ".jpg", ".svg", ".ico"}
+            if cacheable:
+                handler.send_header("Cache-Control", "public, max-age=3600")
+            else:
+                handler.send_header("Cache-Control", "no-cache")
+            handler.end_headers()
+            handler.wfile.write(compressed)
+            return
+
     handler.send_response(HTTPStatus.OK)
     handler.send_header("Content-Type", content_type)
     handler.send_header("Content-Length", str(len(body)))
+    # Cache-Control for static assets
+    cacheable = path.suffix in {".js", ".css", ".ttf", ".woff", ".woff2", ".png", ".jpg", ".svg", ".ico"}
+    if cacheable:
+        handler.send_header("Cache-Control", "public, max-age=3600")
+    else:
+        handler.send_header("Cache-Control", "no-cache")
     handler.end_headers()
     handler.wfile.write(body)
 
@@ -862,7 +891,11 @@ def main() -> None:
     listen = config.get("listen", {})
     host = listen.get("host", "127.0.0.1")
     port = int(listen.get("port", 8012))
-    server = ThreadingHTTPServer((host, port), AppHandler)
+
+    class HighBacklogHTTPServer(ThreadingHTTPServer):
+        request_queue_size = 128
+
+    server = HighBacklogHTTPServer((host, port), AppHandler)
     print(f"SLS Log Inspector running at http://{host}:{port}")
     if not CONFIG_PATH.exists():
         print(f"config.json not found, using example config: {EXAMPLE_CONFIG_PATH}")
