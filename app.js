@@ -514,10 +514,6 @@ const els = {
   onlineRunButton: document.querySelector("#onlineRunButton"),
   onlineRebuildSqlButton: document.querySelector("#onlineRebuildSqlButton"),
   onlineCopySqlButton: document.querySelector("#onlineCopySqlButton"),
-  queryRankHint: document.querySelector("#queryRankHint"),
-  queryRankPanel: document.querySelector("#queryRankPanel"),
-  queryRankSummary: document.querySelector("#queryRankSummary"),
-  queryRankList: document.querySelector("#queryRankList"),
   quickModeButton: document.querySelector("#quickModeButton"),
   sqlModeButton: document.querySelector("#sqlModeButton"),
   quickQueryPane: document.querySelector("#quickQueryPane"),
@@ -765,45 +761,6 @@ function getCurrentQueryUser() {
   };
 }
 
-function renderQueryRanking(ranking) {
-  if (!els.queryRankHint) return;
-  if (!ranking || !ranking.message) {
-    els.queryRankHint.classList.add("hidden");
-    els.queryRankHint.textContent = "";
-    els.queryRankHint.title = "";
-    if (els.queryRankPanel) els.queryRankPanel.classList.add("hidden");
-    return;
-  }
-
-  const current = ranking.current || {};
-  const count = Number(current.count || 0);
-  els.queryRankHint.textContent = `${ranking.message}（今日 ${count} 次）`;
-  els.queryRankHint.title = `今日查询排行榜：${(ranking.leaders || [])
-    .slice(0, 5)
-    .map((item, index) => `${index + 1}. ${item.label || item.id}: ${item.count || 0}次`)
-    .join(" / ")}`;
-  els.queryRankHint.classList.toggle("rank-leading", Number(ranking.ahead_count || 0) === 0);
-  els.queryRankHint.classList.remove("hidden");
-
-  if (els.queryRankPanel && els.queryRankList) {
-    const leaders = Array.isArray(ranking.leaders) ? ranking.leaders : [];
-    els.queryRankList.innerHTML = leaders
-      .slice(0, 5)
-      .map((item) => {
-        const isCurrent = item.id === current.id;
-        return `<li class="${isCurrent ? "current" : ""}">
-          <span>${escapeHtml(item.label || item.id || "-")}</span>
-          <b>${Number(item.count || 0)} 次</b>
-        </li>`;
-      })
-      .join("");
-    if (els.queryRankSummary) {
-      els.queryRankSummary.textContent = `${ranking.day || "今日"} / ${ranking.message}`;
-    }
-    els.queryRankPanel.classList.remove("hidden");
-  }
-}
-
 async function pingPresence() {
   try {
     const response = await fetch("/api/presence", {
@@ -919,12 +876,114 @@ function applyOnlinePanelState() {
   toggle.textContent = state.onlinePanelCollapsed ? "▸" : "▾";
 }
 
+function encodeShareParams(payload) {
+  try {
+    const json = JSON.stringify(payload);
+    const encoded = btoa(unescape(encodeURIComponent(json)));
+    return encoded;
+  } catch {
+    return "";
+  }
+}
+
+function decodeShareParams(encoded) {
+  try {
+    const json = decodeURIComponent(escape(atob(encoded)));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function buildShareUrl(payload) {
+  const params = new URLSearchParams(location.search);
+  params.set("share", encodeShareParams(payload));
+  return `${location.origin}${location.pathname}?${params.toString()}`;
+}
+
+function generateShareLink() {
+  if (!state.online.available) {
+    showToast("请先启动本地代理服务");
+    return;
+  }
+  const payload = getOnlineDraftPayload();
+  // 附加自动生成的 SQL，确保接收方有完整查询语句
+  payload.sql = getOnlineQuerySql();
+  const url = buildShareUrl(payload);
+  copyText(url);
+  showToast("分享链接已复制到剪贴板");
+}
+
+function applySharePayload(payload) {
+  if (!payload || typeof payload !== "object") return;
+
+  // 恢复查询模式（quick / sql）
+  setOnlineMode(payload.mode || "quick");
+
+  // 恢复预设
+  if (payload.preset) {
+    els.onlinePresetSelect.value = payload.preset;
+    applyOnlinePreset(payload.preset);
+  }
+
+  // 恢复日志流
+  if (payload.stream) {
+    els.onlineStreamInput.value = payload.stream;
+    setStreamValue(payload.stream);
+  }
+
+  // 恢复时间
+  if (payload.timePreset) {
+    els.onlineTimePresetSelect.value = payload.timePreset;
+  }
+  if (payload.startAt) els.onlineStartInput.value = payload.startAt;
+  if (payload.endAt) els.onlineEndInput.value = payload.endAt;
+  handleOnlineTimePresetChange();
+
+  // 恢复条数和关键词
+  if (payload.limit) els.onlineLimitInput.value = payload.limit;
+  if (payload.keyword !== undefined) els.onlineKeywordInput.value = payload.keyword;
+
+  // 恢复快速查询字段
+  if (payload.quickPath !== undefined) els.quickPathInput.value = payload.quickPath;
+  if (payload.quickContainer !== undefined && els.quickContainerInput) els.quickContainerInput.value = payload.quickContainer;
+  if (payload.quickParam !== undefined) els.quickParamInput.value = payload.quickParam;
+  if (payload.quickField !== undefined) els.quickFieldInput.value = payload.quickField;
+  if (payload.quickMatch !== undefined) els.quickMatchInput.value = payload.quickMatch;
+  if (payload.quickExpression !== undefined) els.quickExpressionInput.value = payload.quickExpression;
+
+  // 恢复动态过滤器
+  Object.entries(payload.filters || {}).forEach(([key, value]) => {
+    const input = els.onlineDynamicFilters.querySelector(`[data-online-filter="${escapeAttrSelector(key)}"]`);
+    if (input) input.value = value;
+  });
+
+  // 恢复 SQL
+  if (payload.sql) {
+    els.onlineSqlInput.value = payload.sql;
+  }
+
+  // 同步 SQL 预览
+  syncOnlineSqlFromForm();
+
+  // 清除 URL 中的 share 参数，避免刷新时重复应用
+  const url = new URL(location.href);
+  if (url.searchParams.has("share")) {
+    url.searchParams.delete("share");
+    history.replaceState(null, "", url.toString());
+  }
+}
+
 async function setupOnlineQuery() {
   if (!els.onlineRunButton) return;
 
   els.onlineRunButton.addEventListener("click", runOnlineQuery);
   els.onlineRebuildSqlButton.addEventListener("click", syncOnlineSqlFromForm);
   els.onlineCopySqlButton.addEventListener("click", () => copyText(getOnlineQuerySql()));
+
+  // 分享按钮
+  const shareButton = document.querySelector("#shareQueryButton");
+  shareButton?.addEventListener("click", generateShareLink);
   els.onlineSaveDraftButton.addEventListener("click", saveOnlineDraft);
   els.onlineDeleteDraftButton.addEventListener("click", deleteOnlineDraft);
   els.onlineExportDraftsButton.addEventListener("click", exportOnlineDrafts);
@@ -1004,6 +1063,16 @@ async function setupOnlineQuery() {
     els.onlineStatus.textContent = `${meta.connection?.base_url || "-"} / org:${meta.connection?.organization || "-"} / auth:${meta.connection?.auth_mode || "-"}${autoLoginText}`;
     renderOnlinePresets();
     initOnlineDefaults(meta);
+
+    // 检测 URL 中的 share 参数，自动恢复查询配置并执行查询
+    const shareParam = new URLSearchParams(location.search).get("share");
+    if (shareParam) {
+      const sharePayload = decodeShareParams(shareParam);
+      if (sharePayload) {
+        applySharePayload(sharePayload);
+        runOnlineQuery();
+      }
+    }
   } catch (error) {
     state.online.available = false;
     state.online.suggestions = buildOpenObserveSuggestions(null);
@@ -1126,8 +1195,8 @@ function initOnlineDefaults(meta) {
   const defaultStream = (state.online.streams.find((item) => item.default) || state.online.streams[state.online.streams.length - 1] || {}).value || "java_test_console";
   setStreamValue(defaultStream);
   els.onlineLimitInput.value = meta.defaults?.limit || 100;
-  els.onlineTimePresetSelect.value = "1d";
-  resetOnlineTimes(1 * 24 * 60);
+  els.onlineTimePresetSelect.value = "2h";
+  resetOnlineTimes(2 * 60);
   handleOnlineTimePresetChange();
   setOnlineMode("quick");
   syncOnlineSqlFromForm();
@@ -1338,6 +1407,12 @@ function setupSyntaxSuggest() {
   els.quickExpressionInput.addEventListener("focus", () => showSyntaxSuggest());
   els.quickExpressionInput.addEventListener("keydown", (event) => {
     const suggest = state.online.suggest;
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      hideSyntaxSuggest();
+      runOnlineQuery();
+      return;
+    }
     if (event.ctrlKey && event.code === "Space") {
       event.preventDefault();
       showSyntaxSuggest(true);
@@ -1585,7 +1660,6 @@ async function runOnlineQuery() {
 
     const rows = Array.isArray(data.rows) ? data.rows : [];
     replaceLogs(rows, `在线查询 ${data.meta?.stream || payload.stream}`, true);
-    renderQueryRanking(data.ranking);
     state.online.logsSnapshot = null;
     const authRefresh = data.meta?.auth_refresh;
     let authText = "";

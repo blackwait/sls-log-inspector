@@ -21,6 +21,17 @@
           "last_query_at": 1780975635
         }
       }
+    },
+    "2026-06-25": {
+      "users": {
+        "MFmj33XI__RbwMn-": {
+          "id": "MFmj33XI__RbwMn-",
+          "label": "用户-eishc",
+          "count": 1,
+          "first_query_at": 1782358582,
+          "last_query_at": 1782358582
+        }
+      }
     }
   }
 }

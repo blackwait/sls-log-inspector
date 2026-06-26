@@ -19,7 +19,7 @@
   --amber-soft: #fef3da;
   --red: #e0392b;
   --red-soft: #fdebe9;
-  --bar-color: #7fb8ff;
+  --bar-color: #12a150;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -12px rgba(16, 24, 40, 0.16);
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-lift: 0 18px 40px -16px rgba(16, 24, 40, 0.28);
@@ -45,7 +45,7 @@
   --amber-soft: #3d2d11;
   --red: #ff7470;
   --red-soft: #421c20;
-  --bar-color: #6f95d8;
+  --bar-color: #58d68d;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 18px 44px -18px rgba(0, 0, 0, 0.58);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.36);
   --shadow-lift: 0 24px 58px -22px rgba(0, 0, 0, 0.68);
@@ -70,7 +70,7 @@
   --amber-soft: #423519;
   --red: #ff7d91;
   --red-soft: #451f2d;
-  --bar-color: #8a9dff;
+  --bar-color: #54d6b1;
   --shadow: 0 1px 2px rgba(5, 8, 20, 0.42), 0 20px 48px -18px rgba(3, 6, 18, 0.7);
   --shadow-sm: 0 1px 2px rgba(5, 8, 20, 0.45);
   --shadow-lift: 0 26px 60px -22px rgba(3, 6, 18, 0.8);
@@ -95,7 +95,7 @@
   --amber-soft: #3b341d;
   --red: #f4817c;
   --red-soft: #432220;
-  --bar-color: #78b38b;
+  --bar-color: #79d78a;
   --shadow: 0 1px 2px rgba(3, 10, 6, 0.38), 0 18px 46px -18px rgba(3, 10, 6, 0.62);
   --shadow-sm: 0 1px 2px rgba(3, 10, 6, 0.4);
   --shadow-lift: 0 24px 58px -22px rgba(3, 10, 6, 0.72);
@@ -586,97 +586,6 @@ button:focus-visible {
   letter-spacing: 0;
 }
 
-.query-rank-hint {
-  display: inline-flex;
-  align-items: center;
-  max-width: 320px;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--amber) 28%, var(--line));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--amber-soft) 70%, var(--panel));
-  color: color-mix(in srgb, var(--amber) 82%, var(--ink));
-  font-weight: 600;
-}
-
-.query-rank-hint.rank-leading {
-  border-color: color-mix(in srgb, var(--green) 26%, var(--line));
-  background: color-mix(in srgb, var(--green-soft) 70%, var(--panel));
-  color: color-mix(in srgb, var(--green) 82%, var(--ink));
-}
-
-.query-rank-hint.hidden {
-  display: none;
-}
-
-.query-rank-panel {
-  display: grid;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-soft);
-}
-
-.query-rank-panel.hidden {
-  display: none;
-}
-
-.query-rank-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--ink);
-}
-
-.query-rank-title span {
-  color: var(--muted);
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.query-rank-panel ol {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.query-rank-panel li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--panel);
-}
-
-.query-rank-panel li.current {
-  border-color: var(--green);
-  background: var(--green-soft);
-}
-
-.query-rank-panel li span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.query-rank-panel li b {
-  flex-shrink: 0;
-  color: var(--blue);
-}
-
 .online-actions {
   flex-wrap: nowrap;
   flex-shrink: 0;
@@ -745,6 +654,17 @@ button:focus-visible {
   border-color: color-mix(in srgb, var(--blue) 84%, var(--line));
   background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 90%, #fff), color-mix(in srgb, var(--blue) 96%, #111827));
   box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--blue) 76%, transparent);
+}
+
+.share-btn {
+  border-color: color-mix(in srgb, var(--green) 30%, var(--line));
+  color: color-mix(in srgb, var(--green) 80%, var(--ink));
+}
+
+.share-btn:hover {
+  border-color: color-mix(in srgb, var(--green) 48%, var(--line));
+  background: color-mix(in srgb, var(--green-soft) 48%, var(--panel));
+  color: var(--green);
 }
 
 .online-grid {
@@ -1159,7 +1079,7 @@ select:focus {
 }
 
 .bar.active {
-  background: var(--blue);
+  background: var(--green);
 }
 
 .bar:hover {
@@ -1175,9 +1095,9 @@ select:focus {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: rgba(22, 119, 255, 0.12);
-  border-left: 2px solid var(--blue);
-  border-right: 2px solid var(--blue);
+  background: rgba(18, 161, 80, 0.12);
+  border-left: 2px solid var(--green);
+  border-right: 2px solid var(--green);
   pointer-events: none;
   z-index: 2;
 }
